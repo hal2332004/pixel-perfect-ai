@@ -40,7 +40,7 @@ export function RealtimeView() {
         <div className="glass rounded-xl overflow-hidden relative flex flex-col">
           <div className="px-3 py-2 border-b border-border/50 flex items-center justify-between">
             <span className="text-xs font-mono text-muted-foreground uppercase">Original Feed</span>
-            <span className="text-[10px] font-mono text-muted-foreground">640×480</span>
+            <span className="text-[10px] font-mono text-muted-foreground">1280×720</span>
           </div>
           <div className="flex-1 relative">
             <img src={demoKitchenLr} alt="Original camera feed" className="w-full h-full object-cover" />
