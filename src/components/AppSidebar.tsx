@@ -91,13 +91,22 @@ export function AppSidebar({ activeMode, onModeChange }: AppSidebarProps) {
         </div>
       )}
 
-      {/* Collapse toggle */}
-      <button
-        onClick={() => setCollapsed(!collapsed)}
-        className="p-3 border-t border-border/50 text-muted-foreground hover:text-foreground transition-colors"
-      >
-        {collapsed ? <ChevronRight className="w-4 h-4 mx-auto" /> : <ChevronLeft className="w-4 h-4 mx-auto" />}
-      </button>
+      {/* Theme toggle + Collapse */}
+      <div className="border-t border-border/50">
+        <button
+          onClick={() => setDark(!dark)}
+          className="w-full flex items-center gap-3 px-4 py-3 text-muted-foreground hover:text-foreground transition-colors"
+        >
+          {dark ? <Sun className="w-4 h-4 mx-auto flex-shrink-0" /> : <Moon className="w-4 h-4 mx-auto flex-shrink-0" />}
+          {!collapsed && <span className="text-xs">{dark ? "Light Mode" : "Dark Mode"}</span>}
+        </button>
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className="w-full p-3 border-t border-border/50 text-muted-foreground hover:text-foreground transition-colors"
+        >
+          {collapsed ? <ChevronRight className="w-4 h-4 mx-auto" /> : <ChevronLeft className="w-4 h-4 mx-auto" />}
+        </button>
+      </div>
     </div>
   );
 }
