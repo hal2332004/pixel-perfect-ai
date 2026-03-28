@@ -14,7 +14,7 @@ const samples = [
 export function ImageView() {
   const [selected, setSelected] = useState(samples[0]);
   const [model, setModel] = useState("Real-ESRGAN");
-  const [scale, setScale] = useState("x4");
+  const [scale, setScale] = useState("x2");
 
   return (
     <div className="space-y-4 p-6 h-full flex flex-col">
