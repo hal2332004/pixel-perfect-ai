@@ -72,7 +72,7 @@ export function ImageView() {
           <Download className="w-4 h-4" /> Download
         </button>
         <span className="text-xs text-muted-foreground font-mono ml-auto">
-          Input: 512×512 → Output: 2048×2048
+          Input: 1280×720 → Output: 2560×1440
         </span>
       </div>
     </div>

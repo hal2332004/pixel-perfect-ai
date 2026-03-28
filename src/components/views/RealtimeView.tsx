@@ -60,7 +60,7 @@ export function RealtimeView() {
           <div className="flex-1 relative">
             <img src={demoKitchenHr} alt="Super resolution output" className="w-full h-full object-cover" />
             <div className="absolute bottom-2 left-2 px-2 py-1 rounded bg-primary/20 backdrop-blur-sm text-[10px] font-mono text-primary">
-              SR × 4 | Real-ESRGAN
+              SR × 2 | Real-ESRGAN
             </div>
           </div>
         </div>
