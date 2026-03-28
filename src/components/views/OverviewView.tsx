@@ -81,7 +81,7 @@ export function OverviewView() {
       {/* Before / After */}
       <div className="space-y-3">
         <h2 className="text-sm font-mono text-primary uppercase tracking-wider">Before / After Comparison</h2>
-        <BeforeAfterSlider beforeSrc={demoFoodLr} afterSrc={demoFoodHr} />
+        <BeforeAfterSlider beforeSrc={demoFoodLr} afterSrc={demoFoodHr} beforeLabel="Bicubic (1280×720)" afterLabel="Super Resolution (2560×1440)" />
       </div>
 
       {/* About */}
