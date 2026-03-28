@@ -21,6 +21,24 @@ interface AppSidebarProps {
 
 export function AppSidebar({ activeMode, onModeChange }: AppSidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const [dark, setDark] = useState(() => {
+    if (typeof window !== "undefined") {
+      return document.documentElement.classList.contains("dark") ||
+        (!localStorage.getItem("theme") && window.matchMedia("(prefers-color-scheme: dark)").matches) ||
+        localStorage.getItem("theme") === "dark";
+    }
+    return true;
+  });
+
+  useEffect(() => {
+    if (dark) {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("theme", "light");
+    }
+  }, [dark]);
 
   return (
     <div className={cn(
