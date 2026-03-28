@@ -26,7 +26,7 @@ export function OverviewView() {
       {/* 3 Pillars */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
-          { icon: Zap, title: "Model đã làm gì?", desc: "Sử dụng deep learning để upscale hình ảnh camera giám sát x4, giữ nguyên chi tiết và giảm nhiễu." },
+          { icon: Zap, title: "Model đã làm gì?", desc: "Sử dụng deep learning để upscale hình ảnh camera giám sát x2 (1280×720 → 2560×1440), giữ nguyên chi tiết và giảm nhiễu." },
           { icon: Eye, title: "Cải thiện ở đâu?", desc: "PSNR tăng 3.1dB, SSIM cải thiện 9% so với phương pháp truyền thống bicubic interpolation." },
           { icon: Shield, title: "Có đáng tin?", desc: "Kiểm chứng trên 10,000+ frames từ camera thực tế trong môi trường bếp công nghiệp." },
         ].map((item) => (
@@ -81,7 +81,7 @@ export function OverviewView() {
       {/* Before / After */}
       <div className="space-y-3">
         <h2 className="text-sm font-mono text-primary uppercase tracking-wider">Before / After Comparison</h2>
-        <BeforeAfterSlider beforeSrc={demoFoodLr} afterSrc={demoFoodHr} />
+        <BeforeAfterSlider beforeSrc={demoFoodLr} afterSrc={demoFoodHr} beforeLabel="Bicubic (1280×720)" afterLabel="Super Resolution (2560×1440)" />
       </div>
 
       {/* About */}

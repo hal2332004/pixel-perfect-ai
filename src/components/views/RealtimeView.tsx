@@ -30,7 +30,7 @@ export function RealtimeView() {
         <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
           <span>Model: <span className="text-primary">Real-ESRGAN</span></span>
           <span className="text-border">|</span>
-          <span>Scale: <span className="text-primary">x4</span></span>
+          <span>Scale: <span className="text-primary">x2</span></span>
         </div>
       </div>
 
@@ -40,7 +40,7 @@ export function RealtimeView() {
         <div className="glass rounded-xl overflow-hidden relative flex flex-col">
           <div className="px-3 py-2 border-b border-border/50 flex items-center justify-between">
             <span className="text-xs font-mono text-muted-foreground uppercase">Original Feed</span>
-            <span className="text-[10px] font-mono text-muted-foreground">640×480</span>
+            <span className="text-[10px] font-mono text-muted-foreground">1280×720</span>
           </div>
           <div className="flex-1 relative">
             <img src={demoKitchenLr} alt="Original camera feed" className="w-full h-full object-cover" />
@@ -55,12 +55,12 @@ export function RealtimeView() {
         <div className="glass rounded-xl overflow-hidden relative flex flex-col">
           <div className="px-3 py-2 border-b border-border/50 flex items-center justify-between">
             <span className="text-xs font-mono text-primary uppercase">SR Output</span>
-            <span className="text-[10px] font-mono text-primary">2560×1920</span>
+            <span className="text-[10px] font-mono text-primary">2560×1440</span>
           </div>
           <div className="flex-1 relative">
             <img src={demoKitchenHr} alt="Super resolution output" className="w-full h-full object-cover" />
             <div className="absolute bottom-2 left-2 px-2 py-1 rounded bg-primary/20 backdrop-blur-sm text-[10px] font-mono text-primary">
-              SR × 4 | Real-ESRGAN
+              SR × 2 | Real-ESRGAN
             </div>
           </div>
         </div>
