@@ -58,7 +58,7 @@ export function ImageView() {
         <BeforeAfterSlider
           beforeSrc={selected.lr}
           afterSrc={selected.hr}
-          beforeLabel={`Original — ${selected.name}`}
+          beforeLabel={`Bicubic — ${selected.name}`}
           afterLabel={`${model} ${scale}`}
         />
       </div>
