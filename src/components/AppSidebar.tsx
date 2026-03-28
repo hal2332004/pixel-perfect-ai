@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Home, Video, Upload, Image, Cpu, Swords, 
-  ChevronLeft, ChevronRight, Activity
+  ChevronLeft, ChevronRight, Activity, Sun, Moon
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
