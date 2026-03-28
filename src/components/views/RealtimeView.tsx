@@ -30,7 +30,7 @@ export function RealtimeView() {
         <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
           <span>Model: <span className="text-primary">Real-ESRGAN</span></span>
           <span className="text-border">|</span>
-          <span>Scale: <span className="text-primary">x4</span></span>
+          <span>Scale: <span className="text-primary">x2</span></span>
         </div>
       </div>
 
