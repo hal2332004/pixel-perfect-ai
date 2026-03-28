@@ -1,16 +1,26 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from "react";
+import { AppSidebar } from "@/components/AppSidebar";
+import { OverviewView } from "@/components/views/OverviewView";
+import { RealtimeView } from "@/components/views/RealtimeView";
+import { OfflineView } from "@/components/views/OfflineView";
+import { ImageView } from "@/components/views/ImageView";
+import { ControlPanelView } from "@/components/views/ControlPanelView";
+import { ModelArenaView } from "@/components/views/ModelArenaView";
 
-// IMPORTANT: Fully REPLACE this with your own code
-const PlaceholderIndex = () => {
-  // PLACEHOLDER: Replace this entire return statement with the user's app.
-  // The inline background color is intentionally not part of the design system.
+const views = [OverviewView, RealtimeView, OfflineView, ImageView, ControlPanelView, ModelArenaView];
+
+const Index = () => {
+  const [activeMode, setActiveMode] = useState(0);
+  const ActiveView = views[activeMode];
+
   return (
-    <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#fcfbf8' }}>
-      <img data-lovable-blank-page-placeholder="REMOVE_THIS" src="/placeholder.svg" alt="Your app will live here!" />
+    <div className="flex h-screen w-full overflow-hidden">
+      <AppSidebar activeMode={activeMode} onModeChange={setActiveMode} />
+      <main className="flex-1 overflow-y-auto">
+        <ActiveView />
+      </main>
     </div>
   );
 };
-
-const Index = PlaceholderIndex;
 
 export default Index;
