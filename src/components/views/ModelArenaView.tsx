@@ -12,7 +12,6 @@ export function ModelArenaView() {
   const [modelB, setModelB] = useState("SwinIR");
   const [sample, setSample] = useState<"food" | "sushi">("food");
 
-  // Use LR for model A (simulating a weaker model) and HR for model B
   const images = {
     food: { a: demoFoodLr, b: demoFoodHr },
     sushi: { a: demoSushiLr, b: demoSushiHr },
@@ -25,10 +24,25 @@ export function ModelArenaView() {
     setPosition(Math.min(Math.max(x, 0), 100));
   }, []);
 
-  const handleMouseDown = () => { isDragging.current = true; };
-  const handleMouseUp = () => { isDragging.current = false; };
+  const startDrag = () => {
+    isDragging.current = true;
+  };
+
+  const stopDrag = () => {
+    isDragging.current = false;
+  };
+
   const handleMouseMove = (e: React.MouseEvent) => {
     if (isDragging.current) updatePosition(e.clientX);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    startDrag();
+    updatePosition(e.touches[0].clientX);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (isDragging.current) updatePosition(e.touches[0].clientX);
   };
 
   return (
@@ -36,20 +50,25 @@ export function ModelArenaView() {
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-foreground">Model Arena</h2>
         <div className="flex gap-2">
-          <select value={sample} onChange={e => setSample(e.target.value as "food" | "sushi")}
-            className="bg-secondary text-secondary-foreground text-xs font-mono px-3 py-1.5 rounded-lg border border-border">
+          <select
+            value={sample}
+            onChange={(e) => setSample(e.target.value as "food" | "sushi")}
+            className="bg-secondary text-secondary-foreground text-xs font-mono px-3 py-1.5 rounded-lg border border-border"
+          >
             <option value="food">Phở Scene</option>
             <option value="sushi">Sushi Scene</option>
           </select>
         </div>
       </div>
 
-      {/* Model selectors */}
       <div className="grid grid-cols-2 gap-3">
         <div className="glass rounded-lg p-3 flex items-center gap-3">
           <div className="w-3 h-3 rounded-full bg-warning" />
-          <select value={modelA} onChange={e => setModelA(e.target.value)}
-            className="bg-transparent text-foreground text-sm font-mono focus:outline-none flex-1">
+          <select
+            value={modelA}
+            onChange={(e) => setModelA(e.target.value)}
+            className="bg-transparent text-foreground text-sm font-mono focus:outline-none flex-1"
+          >
             <option>ESRGAN</option>
             <option>Bicubic</option>
             <option>Real-ESRGAN</option>
@@ -58,8 +77,11 @@ export function ModelArenaView() {
         </div>
         <div className="glass rounded-lg p-3 flex items-center gap-3">
           <div className="w-3 h-3 rounded-full bg-primary" />
-          <select value={modelB} onChange={e => setModelB(e.target.value)}
-            className="bg-transparent text-foreground text-sm font-mono focus:outline-none flex-1">
+          <select
+            value={modelB}
+            onChange={(e) => setModelB(e.target.value)}
+            className="bg-transparent text-foreground text-sm font-mono focus:outline-none flex-1"
+          >
             <option>SwinIR</option>
             <option>Real-ESRGAN</option>
             <option>Ours (Optimized)</option>
@@ -68,32 +90,33 @@ export function ModelArenaView() {
         </div>
       </div>
 
-      {/* Arena comparison */}
       <div
         ref={containerRef}
         className="flex-1 relative rounded-xl overflow-hidden glass cursor-col-resize select-none min-h-0"
         onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
+        onMouseUp={stopDrag}
+        onMouseLeave={stopDrag}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={stopDrag}
+        onTouchCancel={stopDrag}
       >
-        {/* Right side (Model B) */}
         <img src={images[sample].b} alt={modelB} className="absolute inset-0 w-full h-full object-cover" />
 
-        {/* Left side (Model A) */}
-        <div className="absolute inset-0 overflow-hidden" style={{ width: `${position}%` }}>
-          <img src={images[sample].a} alt={modelA} className="absolute inset-0 w-full h-full object-cover"
-            style={{ width: `${containerRef.current?.offsetWidth || 800}px` }} />
+        <div className="absolute inset-0" style={{ clipPath: `inset(0 ${100 - position}% 0 0)` }}>
+          <img src={images[sample].a} alt={modelA} className="absolute inset-0 w-full h-full object-cover" />
         </div>
 
-        {/* Slider */}
-        <div className="absolute top-0 bottom-0 w-0.5 bg-foreground/50 z-10" style={{ left: `${position}%` }}
-          onMouseDown={handleMouseDown}>
+        <div
+          className="absolute top-0 bottom-0 w-0.5 bg-foreground/50 z-10"
+          style={{ left: `${position}%` }}
+          onMouseDown={startDrag}
+          onTouchStart={handleTouchStart}
+        >
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-foreground/90 flex items-center justify-center">
             <span className="text-background text-xs font-bold">VS</span>
           </div>
         </div>
 
-        {/* Labels */}
         <div className="absolute top-3 left-3 px-3 py-1.5 rounded-lg bg-warning/20 backdrop-blur-sm border border-warning/30 z-20">
           <span className="text-xs font-mono text-warning">A: {modelA}</span>
         </div>
@@ -102,7 +125,6 @@ export function ModelArenaView() {
         </div>
       </div>
 
-      {/* Comparison table */}
       <div className="glass rounded-xl overflow-hidden">
         <table className="w-full text-sm">
           <thead>
@@ -119,12 +141,18 @@ export function ModelArenaView() {
               { metric: "SSIM", a: "0.88", b: "0.91", winner: "B" },
               { metric: "FPS", a: "24", b: "12", winner: "A" },
               { metric: "Params", a: "16.7M", b: "11.8M", winner: "B" },
-            ].map(row => (
+            ].map((row) => (
               <tr key={row.metric} className="border-b border-border/20">
                 <td className="px-4 py-2 text-foreground font-mono text-xs">{row.metric}</td>
-                <td className={`text-center px-4 py-2 font-mono text-xs ${row.winner === "A" ? "text-warning font-bold" : "text-muted-foreground"}`}>{row.a}</td>
-                <td className={`text-center px-4 py-2 font-mono text-xs ${row.winner === "B" ? "text-primary font-bold" : "text-muted-foreground"}`}>{row.b}</td>
-                <td className={`text-center px-4 py-2 font-mono text-xs font-bold ${row.winner === "A" ? "text-warning" : "text-primary"}`}>{row.winner}</td>
+                <td className={`text-center px-4 py-2 font-mono text-xs ${row.winner === "A" ? "text-warning font-bold" : "text-muted-foreground"}`}>
+                  {row.a}
+                </td>
+                <td className={`text-center px-4 py-2 font-mono text-xs ${row.winner === "B" ? "text-primary font-bold" : "text-muted-foreground"}`}>
+                  {row.b}
+                </td>
+                <td className={`text-center px-4 py-2 font-mono text-xs font-bold ${row.winner === "A" ? "text-warning" : "text-primary"}`}>
+                  {row.winner}
+                </td>
               </tr>
             ))}
           </tbody>
