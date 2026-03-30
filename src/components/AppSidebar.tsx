@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { 
   Home, Video, Upload, Image, Cpu, Swords, 
-  ChevronLeft, ChevronRight, Activity, Sun, Moon
+  ChevronLeft, ChevronRight, Activity, Sun, Moon, PlugZap, PowerOff
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -17,9 +17,22 @@ const modes = [
 interface AppSidebarProps {
   activeMode: number;
   onModeChange: (mode: number) => void;
+  isConnected: boolean;
+  isConnecting: boolean;
+  hasConnectionError: boolean;
+  onConnect: () => void;
+  onDisconnect: () => void;
 }
 
-export function AppSidebar({ activeMode, onModeChange }: AppSidebarProps) {
+export function AppSidebar({
+  activeMode,
+  onModeChange,
+  isConnected,
+  isConnecting,
+  hasConnectionError,
+  onConnect,
+  onDisconnect,
+}: AppSidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [dark, setDark] = useState(() => {
     if (typeof window !== "undefined") {
@@ -60,7 +73,15 @@ export function AppSidebar({ activeMode, onModeChange }: AppSidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 p-2 space-y-1">
-        {modes.map((mode) => {
+        {!isConnected && !collapsed && (
+          <div className="px-3 py-4 rounded-lg border border-dashed border-border/70 bg-secondary/20">
+            <p className="text-xs font-mono uppercase tracking-wider text-muted-foreground">Connection Required</p>
+            <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
+              Nhấn Connect để mở các tab giám sát và xử lý dữ liệu.
+            </p>
+          </div>
+        )}
+        {isConnected && modes.map((mode) => {
           const Icon = mode.icon;
           const isActive = activeMode === mode.id;
           return (
@@ -84,9 +105,43 @@ export function AppSidebar({ activeMode, onModeChange }: AppSidebarProps) {
       {/* Status */}
       {!collapsed && (
         <div className="p-4 border-t border-border/50">
+          <div className="mb-3">
+            {!isConnected ? (
+              <button
+                onClick={onConnect}
+                disabled={isConnecting}
+                className={cn(
+                  "w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200",
+                  "border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20",
+                  "disabled:opacity-60 disabled:cursor-not-allowed"
+                )}
+              >
+                <PlugZap className="w-3.5 h-3.5" />
+                {isConnecting ? "Connecting..." : "Connect"}
+              </button>
+            ) : (
+              <button
+                onClick={onDisconnect}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200 border border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/20"
+              >
+                <PowerOff className="w-3.5 h-3.5" />
+                Disconnect
+              </button>
+            )}
+          </div>
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-success animate-pulse-glow" />
-            <span className="text-xs text-muted-foreground font-mono">System Online</span>
+            <div
+              className={cn(
+                "w-2 h-2 rounded-full",
+                isConnected && "bg-success animate-pulse-glow",
+                isConnecting && "bg-warning animate-pulse",
+                !isConnected && !isConnecting && !hasConnectionError && "bg-muted-foreground",
+                hasConnectionError && "bg-destructive animate-pulse"
+              )}
+            />
+            <span className="text-xs text-muted-foreground font-mono">
+              {isConnected ? "Connected" : isConnecting ? "Connecting" : hasConnectionError ? "Connect Failed" : "Disconnected"}
+            </span>
           </div>
         </div>
       )}
