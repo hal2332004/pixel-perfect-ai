@@ -55,11 +55,9 @@ export function OverviewView() {
             </thead>
             <tbody>
               {[
-                { model: messages.overview.rows.bicubic, psnr: "28.1", ssim: "0.81", fps: "60", params: "0", highlight: false },
-                { model: "ESRGAN", psnr: "30.5", ssim: "0.88", fps: "24", params: "16.7M", highlight: false },
-                { model: "Real-ESRGAN", psnr: "31.2", ssim: "0.90", fps: "20", params: "16.7M", highlight: true },
-                { model: "SwinIR", psnr: "31.8", ssim: "0.91", fps: "12", params: "11.8M", highlight: false },
-                { model: messages.overview.rows.oursOptimized, psnr: "31.3", ssim: "0.90", fps: "30", params: "5.2M", highlight: true },
+                { model: "ESPCNN", psnr: "29.7", ssim: "0.86", fps: "42", params: "0.14M", highlight: false },
+                { model: "RFDM", psnr: "31.1", ssim: "0.90", fps: "28", params: "0.63M", highlight: true },
+                { model: "IMDN", psnr: "31.4", ssim: "0.91", fps: "32", params: "0.72M", highlight: true },
               ].map((row) => (
                 <tr key={row.model} className={row.highlight ? "bg-primary/5" : "hover:bg-secondary/30"}>
                   <td className="px-5 py-3 font-medium text-foreground flex items-center gap-2">

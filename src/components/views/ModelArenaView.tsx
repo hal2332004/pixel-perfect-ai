@@ -10,8 +10,8 @@ export function ModelArenaView() {
   const [position, setPosition] = useState(50);
   const containerRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
-  const [modelA, setModelA] = useState("ESRGAN");
-  const [modelB, setModelB] = useState("SwinIR");
+  const [modelA, setModelA] = useState("ESPCNN");
+  const [modelB, setModelB] = useState("IMDN");
   const [sample, setSample] = useState<"food" | "sushi">("food");
 
   const images = {
@@ -71,9 +71,9 @@ export function ModelArenaView() {
             onChange={(e) => setModelA(e.target.value)}
             className="bg-transparent text-foreground text-sm font-mono focus:outline-none flex-1"
           >
-            <option>ESRGAN</option>
-            <option>Bicubic</option>
-            <option>Real-ESRGAN</option>
+            <option>ESPCNN</option>
+            <option>RFDM</option>
+            <option>IMDN</option>
           </select>
           <span className="text-[10px] text-muted-foreground font-mono">PSNR: 30.5</span>
         </div>
@@ -84,9 +84,9 @@ export function ModelArenaView() {
             onChange={(e) => setModelB(e.target.value)}
             className="bg-transparent text-foreground text-sm font-mono focus:outline-none flex-1"
           >
-            <option>SwinIR</option>
-            <option>Real-ESRGAN</option>
-            <option>Ours (Optimized)</option>
+            <option>IMDN</option>
+            <option>RFDM</option>
+            <option>ESPCNN</option>
           </select>
           <span className="text-[10px] text-muted-foreground font-mono">PSNR: 31.8</span>
         </div>

@@ -30,7 +30,7 @@ export function RealtimeView() {
           <StatusBadge status="online" label={messages.common.live} />
         </div>
         <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
-          <span>{messages.common.model}: <span className="text-primary">Real-ESRGAN</span></span>
+          <span>{messages.common.model}: <span className="text-primary">IMDN</span></span>
           <span className="text-border">|</span>
           <span>{messages.common.scale}: <span className="text-primary">x2</span></span>
         </div>

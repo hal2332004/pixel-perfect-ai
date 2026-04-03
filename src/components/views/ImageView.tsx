@@ -15,7 +15,7 @@ const samples = [
 export function ImageView() {
   const { messages } = useLanguage();
   const [selectedId, setSelectedId] = useState<(typeof samples)[number]["id"]>("food");
-  const [model, setModel] = useState("Real-ESRGAN");
+  const [model, setModel] = useState("ESPCNN");
   const [scale, setScale] = useState("x2");
   const selected = samples.find((item) => item.id === selectedId) || samples[0];
 
@@ -31,9 +31,9 @@ export function ImageView() {
         <div className="flex items-center gap-2">
           <select value={model} onChange={e => setModel(e.target.value)}
             className="bg-secondary text-secondary-foreground text-xs font-mono px-3 py-1.5 rounded-lg border border-border focus:outline-none focus:ring-1 focus:ring-primary">
-            <option>Real-ESRGAN</option>
-            <option>ESRGAN</option>
-            <option>SwinIR</option>
+            <option>ESPCNN</option>
+            <option>RFDM</option>
+            <option>IMDN</option>
           </select>
           <select value={scale} onChange={e => setScale(e.target.value)}
             className="bg-secondary text-secondary-foreground text-xs font-mono px-3 py-1.5 rounded-lg border border-border focus:outline-none focus:ring-1 focus:ring-primary">
@@ -63,12 +63,14 @@ export function ImageView() {
 
       {/* Before/After Slider */}
       <div className="flex-1 min-h-0">
-        <BeforeAfterSlider
-          beforeSrc={selected.lr}
-          afterSrc={selected.hr}
-          beforeLabel={`Bicubic - ${sampleNames[selected.id]}`}
-          afterLabel={`${model} ${scale}`}
-        />
+        <div className="mx-auto w-full max-w-5xl">
+          <BeforeAfterSlider
+            beforeSrc={selected.lr}
+            afterSrc={selected.hr}
+            beforeLabel={`${messages.common.original} - ${sampleNames[selected.id]}`}
+            afterLabel={`${model} ${scale}`}
+          />
+        </div>
       </div>
 
       {/* Actions */}

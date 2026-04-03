@@ -10,7 +10,7 @@ interface BeforeAfterSliderProps {
 export function BeforeAfterSlider({
   beforeSrc,
   afterSrc,
-  beforeLabel = "Bicubic",
+  beforeLabel = "Original",
   afterLabel = "Super Resolution",
 }: BeforeAfterSliderProps) {
   const [position, setPosition] = useState(50);
