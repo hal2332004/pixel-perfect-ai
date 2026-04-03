@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface StatusBadgeProps {
   status: "online" | "processing" | "waiting" | "error" | "completed";
@@ -14,6 +15,8 @@ const statusStyles = {
 };
 
 export function StatusBadge({ status, label }: StatusBadgeProps) {
+  const { messages } = useLanguage();
+
   return (
     <span className={cn(
       "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-mono border",
@@ -27,7 +30,7 @@ export function StatusBadge({ status, label }: StatusBadgeProps) {
         status === "error" && "bg-destructive",
         status === "completed" && "bg-accent",
       )} />
-      {label || status}
+      {label || messages.status[status]}
     </span>
   );
 }
