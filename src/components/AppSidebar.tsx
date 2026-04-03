@@ -38,11 +38,9 @@ export function AppSidebar({
   const [collapsed, setCollapsed] = useState(false);
   const [dark, setDark] = useState(() => {
     if (typeof window !== "undefined") {
-      return document.documentElement.classList.contains("dark") ||
-        (!localStorage.getItem("theme") && window.matchMedia("(prefers-color-scheme: dark)").matches) ||
-        localStorage.getItem("theme") === "dark";
+      return localStorage.getItem("theme") === "dark";
     }
-    return true;
+    return false;
   });
 
   useEffect(() => {
@@ -76,7 +74,7 @@ export function AppSidebar({
         </div>
         {!collapsed && (
           <div className="overflow-hidden">
-            <h1 className="text-sm font-bold text-foreground tracking-tight">AI Monitor</h1>
+            <h1 className="text-sm font-bold text-foreground tracking-tight">Deep Super Resolution</h1>
             <p className="text-[10px] text-muted-foreground font-mono">JETSON ORIN X</p>
           </div>
         )}

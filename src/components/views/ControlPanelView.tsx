@@ -13,11 +13,22 @@ interface Alert {
 
 export function ControlPanelView() {
   const { messages } = useLanguage();
-  const [gpu, setGpu] = useState(72);
-  const [vram, setVram] = useState(6.8);
-  const [temp, setTemp] = useState(68);
-  const [power, setPower] = useState(28);
+  const [gpu, setGpu] = useState<number | null>(null);
+  const [vram, setVram] = useState<number | null>(null);
+  const [vramTotal, setVramTotal] = useState<number>(8);
+  const [temp, setTemp] = useState<number | null>(null);
+  const [power, setPower] = useState<number | null>(null);
+  const [maxPower, setMaxPower] = useState(40);
   const [activeModel, setActiveModel] = useState("Real-ESRGAN");
+  const [pollError, setPollError] = useState<string | null>(null);
+  const [lastSource, setLastSource] = useState<"tegrastats" | "fallback" | null>(null);
+
+  const inferredHealthApiBase =
+    typeof window !== "undefined"
+      ? `${window.location.protocol}//${window.location.hostname}:9000`
+      : "";
+  const healthApiBase = import.meta.env.VITE_HEALTH_API_URL?.trim().replace(/\/$/, "") || inferredHealthApiBase;
+  const healthApiKey = import.meta.env.VITE_HEALTH_API_KEY?.trim() || "";
 
   const alerts: Alert[] = [
     { id: "1", type: "warning", message: messages.controlPanel.alerts.temperatureWarning, time: messages.controlPanel.alerts.minAgo2 },
@@ -26,17 +37,113 @@ export function ControlPanelView() {
   ];
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setGpu(Math.floor(65 + Math.random() * 20));
-      setVram(+(6.2 + Math.random() * 1.5).toFixed(1));
-      setTemp(Math.floor(62 + Math.random() * 12));
-      setPower(Math.floor(24 + Math.random() * 10));
-    }, 2000);
-    return () => clearInterval(interval);
-  }, []);
+    if (!healthApiKey) {
+      setPollError("Thiếu VITE_HEALTH_API_KEY");
+      return;
+    }
 
-  const tempColor = temp > 75 ? "destructive" : temp > 65 ? "warning" : "success";
-  const gpuColor = gpu > 85 ? "warning" : "primary";
+    let isActive = true;
+
+    const fetchMetrics = async () => {
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 10000);
+
+      try {
+        const response = await fetch(`${healthApiBase}/control-panel/metrics`, {
+          method: "GET",
+          headers: {
+            "X-API-Key": healthApiKey,
+          },
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = (await response.json()) as {
+          gpu_percent?: number | null;
+          vram_used_gb?: number | null;
+          vram_total_gb?: number | null;
+          temp_c?: number | null;
+          power_w?: number | null;
+          max_power_w?: number | null;
+          active_model?: string | null;
+          source?: "tegrastats" | "fallback";
+        };
+
+        if (!isActive) {
+          return;
+        }
+
+        setPollError(null);
+        if (data.source) {
+          setLastSource(data.source);
+        }
+
+        if (typeof data.gpu_percent === "number") {
+          setGpu(Math.max(0, Math.min(100, Math.round(data.gpu_percent))));
+        } else {
+          setGpu(null);
+        }
+        if (typeof data.vram_used_gb === "number") {
+          setVram(+data.vram_used_gb.toFixed(1));
+        } else {
+          setVram(null);
+        }
+        if (typeof data.vram_total_gb === "number" && data.vram_total_gb > 0) {
+          setVramTotal(+data.vram_total_gb.toFixed(1));
+        }
+        if (typeof data.temp_c === "number") {
+          setTemp(Math.round(data.temp_c));
+        } else {
+          setTemp(null);
+        }
+        if (typeof data.power_w === "number") {
+          setPower(+data.power_w.toFixed(1));
+        } else {
+          setPower(null);
+        }
+        if (typeof data.max_power_w === "number" && data.max_power_w > 0) {
+          setMaxPower(+data.max_power_w.toFixed(1));
+        }
+        if (typeof data.active_model === "string" && data.active_model.trim()) {
+          setActiveModel(data.active_model);
+        }
+      } catch (error) {
+        if (!isActive) {
+          return;
+        }
+
+        const message = error instanceof Error ? error.message : "Unknown polling error";
+        setPollError(message);
+        console.error("Control panel polling failed", {
+          endpoint: `${healthApiBase}/control-panel/metrics`,
+          message,
+        });
+      } finally {
+        window.clearTimeout(timeoutId);
+      }
+    };
+
+    void fetchMetrics();
+    const interval = setInterval(() => {
+      void fetchMetrics();
+    }, 20000); // Poll every 20 seconds
+
+    return () => {
+      isActive = false;
+      clearInterval(interval);
+    };
+  }, [healthApiBase, healthApiKey]);
+
+  const tempColor = (temp ?? 0) > 75 ? "destructive" : (temp ?? 0) > 65 ? "warning" : "success";
+  const gpuColor = (gpu ?? 0) > 85 ? "warning" : "primary";
+
+  const gpuValue = gpu ?? "N/A";
+  const vramValue = vram ?? "N/A";
+  const tempValue = temp ?? "N/A";
+  const powerValue = power ?? "N/A";
 
   return (
     <div className="space-y-4 p-6">
@@ -45,12 +152,20 @@ export function ControlPanelView() {
         <StatusBadge status="online" label="Jetson Orin X" />
       </div>
 
+      <div className="text-xs font-mono text-muted-foreground">
+        Endpoint: {healthApiBase}/control-panel/metrics
+      </div>
+      {lastSource === "fallback" && (
+        <div className="text-xs text-warning">Khong doc duoc tegrastats, backend dang tra fallback.</div>
+      )}
+      {pollError && <div className="text-xs text-destructive">Polling error: {pollError}</div>}
+
       {/* Metrics Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <MetricCard label={messages.controlPanel.gpuUsage} value={gpu} unit="%" icon={<Cpu className="w-4 h-4" />} color={gpuColor} percentage={gpu} />
-        <MetricCard label={messages.controlPanel.vram} value={vram} unit="/ 8 GB" icon={<HardDrive className="w-4 h-4" />} color="accent" percentage={(vram / 8) * 100} />
-        <MetricCard label={messages.controlPanel.temperature} value={temp} unit="°C" icon={<Thermometer className="w-4 h-4" />} color={tempColor} percentage={(temp / 100) * 100} />
-        <MetricCard label={messages.controlPanel.powerDraw} value={power} unit="W" icon={<Zap className="w-4 h-4" />} color="primary" percentage={(power / 40) * 100} />
+        <MetricCard label={messages.controlPanel.gpuUsage} value={gpuValue} unit={gpu === null ? "" : "%"} icon={<Cpu className="w-4 h-4" />} color={gpuColor} percentage={typeof gpu === "number" ? gpu : undefined} />
+        <MetricCard label={messages.controlPanel.vram} value={vramValue} unit={typeof vram === "number" ? `/ ${vramTotal} GB` : ""} icon={<HardDrive className="w-4 h-4" />} color="accent" percentage={typeof vram === "number" && vramTotal > 0 ? (vram / vramTotal) * 100 : undefined} />
+        <MetricCard label={messages.controlPanel.temperature} value={tempValue} unit={temp === null ? "" : "°C"} icon={<Thermometer className="w-4 h-4" />} color={tempColor} percentage={typeof temp === "number" ? temp : undefined} />
+        <MetricCard label={messages.controlPanel.powerDraw} value={powerValue} unit={power === null ? "" : "W"} icon={<Zap className="w-4 h-4" />} color="primary" percentage={typeof power === "number" && maxPower > 0 ? (power / maxPower) * 100 : undefined} />
       </div>
 
       {/* Model Switching */}
