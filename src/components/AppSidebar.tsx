@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { 
   Home, Video, Upload, Image, Cpu, Swords, 
-  ChevronLeft, ChevronRight, Activity, Sun, Moon, PlugZap, PowerOff
+  ChevronLeft, ChevronRight, Activity, Sun, Moon, PlugZap, PowerOff, Languages
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLanguage, type Language } from "@/context/LanguageContext";
 
 const modes = [
   { id: 0, label: "Overview", icon: Home },
@@ -33,6 +34,7 @@ export function AppSidebar({
   onConnect,
   onDisconnect,
 }: AppSidebarProps) {
+  const { language, setLanguage } = useLanguage();
   const [collapsed, setCollapsed] = useState(false);
   const [dark, setDark] = useState(() => {
     if (typeof window !== "undefined") {
@@ -52,6 +54,15 @@ export function AppSidebar({
       localStorage.setItem("theme", "light");
     }
   }, [dark]);
+
+  const cycleLanguage = () => {
+    const order: Language[] = ["vi", "en", "ja"];
+    const currentIndex = order.indexOf(language);
+    const nextLanguage = order[(currentIndex + 1) % order.length];
+    setLanguage(nextLanguage);
+  };
+
+  const languageLabel = language === "vi" ? "Tiếng Việt" : language === "en" ? "English" : "日本語";
 
   return (
     <div className={cn(
@@ -148,6 +159,13 @@ export function AppSidebar({
 
       {/* Theme toggle + Collapse */}
       <div className="border-t border-border/50">
+        <button
+          onClick={cycleLanguage}
+          className="w-full flex items-center gap-3 px-4 py-3 text-muted-foreground hover:text-foreground transition-colors border-b border-border/50"
+        >
+          <Languages className="w-4 h-4 mx-auto flex-shrink-0" />
+          {!collapsed && <span className="text-xs">{languageLabel}</span>}
+        </button>
         <button
           onClick={() => setDark(!dark)}
           className="w-full flex items-center gap-3 px-4 py-3 text-muted-foreground hover:text-foreground transition-colors"

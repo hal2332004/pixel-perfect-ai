@@ -1,10 +1,12 @@
 import { useState, useRef, useCallback } from "react";
+import { useLanguage } from "@/context/LanguageContext";
 import demoFoodLr from "@/assets/demo-food-lr.jpg";
 import demoFoodHr from "@/assets/demo-food-hr.jpg";
 import demoSushiLr from "@/assets/demo-sushi-lr.jpg";
 import demoSushiHr from "@/assets/demo-sushi-hr.jpg";
 
 export function ModelArenaView() {
+  const { messages } = useLanguage();
   const [position, setPosition] = useState(50);
   const containerRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
@@ -48,15 +50,15 @@ export function ModelArenaView() {
   return (
     <div className="space-y-4 p-6 h-full flex flex-col">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-foreground">Model Arena</h2>
+        <h2 className="text-lg font-semibold text-foreground">{messages.modelArena.title}</h2>
         <div className="flex gap-2">
           <select
             value={sample}
             onChange={(e) => setSample(e.target.value as "food" | "sushi")}
             className="bg-secondary text-secondary-foreground text-xs font-mono px-3 py-1.5 rounded-lg border border-border"
           >
-            <option value="food">Phở Scene</option>
-            <option value="sushi">Sushi Scene</option>
+            <option value="food">{messages.modelArena.sceneFood}</option>
+            <option value="sushi">{messages.modelArena.sceneSushi}</option>
           </select>
         </div>
       </div>
@@ -118,10 +120,10 @@ export function ModelArenaView() {
         </div>
 
         <div className="absolute top-3 left-3 px-3 py-1.5 rounded-lg bg-warning/20 backdrop-blur-sm border border-warning/30 z-20">
-          <span className="text-xs font-mono text-warning">A: {modelA}</span>
+          <span className="text-xs font-mono text-warning">{messages.modelArena.labelA}: {modelA}</span>
         </div>
         <div className="absolute top-3 right-3 px-3 py-1.5 rounded-lg bg-primary/20 backdrop-blur-sm border border-primary/30 z-20">
-          <span className="text-xs font-mono text-primary">B: {modelB}</span>
+          <span className="text-xs font-mono text-primary">{messages.modelArena.labelB}: {modelB}</span>
         </div>
       </div>
 
@@ -129,10 +131,10 @@ export function ModelArenaView() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border/50">
-              <th className="text-left px-4 py-2 text-xs font-mono text-muted-foreground">Metric</th>
+              <th className="text-left px-4 py-2 text-xs font-mono text-muted-foreground">{messages.common.metric}</th>
               <th className="text-center px-4 py-2 text-xs font-mono text-warning">{modelA}</th>
               <th className="text-center px-4 py-2 text-xs font-mono text-primary">{modelB}</th>
-              <th className="text-center px-4 py-2 text-xs font-mono text-muted-foreground">Winner</th>
+              <th className="text-center px-4 py-2 text-xs font-mono text-muted-foreground">{messages.common.winner}</th>
             </tr>
           </thead>
           <tbody>
