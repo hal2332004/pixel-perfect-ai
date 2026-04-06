@@ -48,7 +48,7 @@ export function BeforeAfterSlider({
   return (
     <div
       ref={containerRef}
-      className="relative w-full aspect-video rounded-lg overflow-hidden cursor-col-resize glass select-none"
+      className="relative w-full aspect-video rounded-lg overflow-hidden cursor-col-resize glass select-none bg-black/30"
       onMouseMove={handleMouseMove}
       onMouseUp={stopDrag}
       onMouseLeave={stopDrag}
@@ -56,10 +56,10 @@ export function BeforeAfterSlider({
       onTouchEnd={stopDrag}
       onTouchCancel={stopDrag}
     >
-      <img src={afterSrc} alt={afterLabel} className="absolute inset-0 w-full h-full object-cover" />
+      <img src={afterSrc} alt={afterLabel} className="absolute inset-0 w-full h-full object-contain" />
 
       <div className="absolute inset-0" style={{ clipPath: `inset(0 ${100 - position}% 0 0)` }}>
-        <img src={beforeSrc} alt={beforeLabel} className="absolute inset-0 w-full h-full object-cover" />
+        <img src={beforeSrc} alt={beforeLabel} className="absolute inset-0 w-full h-full object-contain" />
       </div>
 
       <div

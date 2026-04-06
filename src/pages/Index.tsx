@@ -11,6 +11,8 @@ import { Wifi, WifiOff, ShieldAlert } from "lucide-react";
 
 const views = [OverviewView, RealtimeView, OfflineView, ImageView, ControlPanelView, ModelArenaView];
 const SESSION_KEY = "health-session-active";
+const IMAGE_VIEW_STORAGE_KEY = "image-view-state";
+const OFFLINE_VIEW_STORAGE_KEY = "offline-video-view-state";
 
 function getInitialConnectionState(): boolean {
   if (typeof window === "undefined") {
@@ -101,6 +103,8 @@ const Index = () => {
     setHasConnectionError(false);
     setActiveMode(0);
     sessionStorage.removeItem(SESSION_KEY);
+    sessionStorage.removeItem(IMAGE_VIEW_STORAGE_KEY);
+    sessionStorage.removeItem(OFFLINE_VIEW_STORAGE_KEY);
     toast("Đã disconnect", {
       description: "Session hiện tại đã được xóa. Bạn có thể connect lại.",
     });

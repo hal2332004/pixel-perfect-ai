@@ -129,7 +129,7 @@ export function ControlPanelView() {
     void fetchMetrics();
     const interval = setInterval(() => {
       void fetchMetrics();
-    }, 20000); // Poll every 20 seconds
+    }, 5000); // Poll every 5 seconds
 
     return () => {
       isActive = false;
