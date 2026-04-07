@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AppSidebar } from "@/components/AppSidebar";
 import { OverviewView } from "@/components/views/OverviewView";
 import { RealtimeView } from "@/components/views/RealtimeView";
@@ -11,50 +11,255 @@ import { Wifi, WifiOff, ShieldAlert } from "lucide-react";
 
 const views = [OverviewView, RealtimeView, OfflineView, ImageView, ControlPanelView, ModelArenaView];
 const SESSION_KEY = "health-session-active";
+const CONNECTION_ID_KEY = "health-connection-id";
+const CLIENT_ID_KEY = "health-client-id";
 const IMAGE_VIEW_STORAGE_KEY = "image-view-state";
 const OFFLINE_VIEW_STORAGE_KEY = "offline-video-view-state";
+const HEARTBEAT_INTERVAL_MS = 10_000;
+
+type ConnectResponse = {
+  connection_id?: string;
+  message?: string;
+};
+
+type HeartbeatResponse = {
+  alive?: boolean;
+  message?: string;
+};
+
+type ConnectionStatusResponse = {
+  is_connected?: boolean;
+  connection_id?: string | null;
+};
+
+function withConnectPort(baseUrl: string): string {
+  if (!baseUrl) {
+    return "";
+  }
+
+  if (/:[0-9]+$/.test(baseUrl)) {
+    return baseUrl.replace(/:[0-9]+$/, ":8001");
+  }
+
+  return `${baseUrl}:8001`;
+}
+
+function normalizeAbsoluteBaseUrl(rawUrl: string): string {
+  const value = rawUrl.trim().replace(/\/$/, "");
+  if (!value) {
+    return "";
+  }
+
+  if (/^https?:\/\//i.test(value)) {
+    return value;
+  }
+
+  if (value.startsWith(":")) {
+    if (typeof window === "undefined") {
+      return "";
+    }
+    return `${window.location.protocol}//${window.location.hostname}${value}`;
+  }
+
+  if (value.startsWith("//")) {
+    if (typeof window === "undefined") {
+      return "";
+    }
+    return `${window.location.protocol}${value}`;
+  }
+
+  try {
+    if (typeof window === "undefined") {
+      return "";
+    }
+    return new URL(value, window.location.origin).origin;
+  } catch {
+    return "";
+  }
+}
 
 function getInitialConnectionState(): boolean {
   if (typeof window === "undefined") {
     return false;
   }
 
-  return sessionStorage.getItem(SESSION_KEY) === "true";
+  return sessionStorage.getItem(SESSION_KEY) === "true" && Boolean(sessionStorage.getItem(CONNECTION_ID_KEY));
+}
+
+function getInitialConnectionId(): string | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  return sessionStorage.getItem(CONNECTION_ID_KEY);
+}
+
+function getOrCreateClientId(): string {
+  const existing = localStorage.getItem(CLIENT_ID_KEY);
+  if (existing) {
+    return existing;
+  }
+
+  const created = `web-ui-${crypto.randomUUID()}`;
+  localStorage.setItem(CLIENT_ID_KEY, created);
+  return created;
 }
 
 const Index = () => {
   const [activeMode, setActiveMode] = useState(0);
   const [isConnected, setIsConnected] = useState<boolean>(getInitialConnectionState);
+  const [connectionId, setConnectionId] = useState<string | null>(getInitialConnectionId);
   const [isConnecting, setIsConnecting] = useState(false);
   const [hasConnectionError, setHasConnectionError] = useState(false);
   const ActiveView = views[activeMode];
+  const heartbeatTimerRef = useRef<number | null>(null);
+  const heartbeatFailCountRef = useRef(0);
+  const heartbeatInFlightRef = useRef(false);
 
-  const healthApiBase = useMemo(() => import.meta.env.VITE_HEALTH_API_URL?.trim().replace(/\/$/, "") || "", []);
+  const healthApiBase = useMemo(
+    () => normalizeAbsoluteBaseUrl(import.meta.env.VITE_HEALTH_API_URL?.trim() || ""),
+    [],
+  );
+  const connectApiBase = useMemo(
+    () => normalizeAbsoluteBaseUrl(import.meta.env.VITE_CONNECT_API_URL?.trim() || "") || withConnectPort(healthApiBase),
+    [healthApiBase],
+  );
 
   const healthServerUrl = useMemo(
-    () => import.meta.env.VITE_HEALTH_SERVER_URL?.trim().replace(/\/$/, "") || "",
+    () => normalizeAbsoluteBaseUrl(import.meta.env.VITE_HEALTH_SERVER_URL?.trim() || "") || healthApiBase,
     [],
+  );
+  const connectServerUrl = useMemo(
+    () =>
+      normalizeAbsoluteBaseUrl(import.meta.env.VITE_CONNECT_SERVER_URL?.trim() || "") ||
+      connectApiBase ||
+      withConnectPort(healthServerUrl),
+    [connectApiBase, healthServerUrl],
   );
 
   const healthApiKey = useMemo(() => import.meta.env.VITE_HEALTH_API_KEY?.trim() || "", []);
+  const connectApiKey = useMemo(() => import.meta.env.VITE_CONNECT_API_KEY?.trim() || healthApiKey, [healthApiKey]);
+
+  const stopHeartbeat = () => {
+    if (heartbeatTimerRef.current !== null) {
+      window.clearInterval(heartbeatTimerRef.current);
+      heartbeatTimerRef.current = null;
+    }
+    heartbeatInFlightRef.current = false;
+    heartbeatFailCountRef.current = 0;
+  };
+
+  const clearConnectionState = () => {
+    setIsConnected(false);
+    setConnectionId(null);
+    stopHeartbeat();
+    sessionStorage.removeItem(SESSION_KEY);
+    sessionStorage.removeItem(CONNECTION_ID_KEY);
+  };
+
+  const startHeartbeat = (currentConnectionId: string) => {
+    stopHeartbeat();
+
+    heartbeatTimerRef.current = window.setInterval(async () => {
+      if (heartbeatInFlightRef.current) {
+        return;
+      }
+
+      heartbeatInFlightRef.current = true;
+      try {
+        const response = await fetch(`${connectApiBase}/heartbeat`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-API-Key": connectApiKey,
+          },
+          body: JSON.stringify({ connection_id: currentConnectionId }),
+        });
+
+        const data = (await response.json()) as HeartbeatResponse;
+        if (!response.ok || !data.alive) {
+          heartbeatFailCountRef.current += 1;
+          if (heartbeatFailCountRef.current >= 3) {
+            clearConnectionState();
+            setHasConnectionError(true);
+            setActiveMode(0);
+            sessionStorage.removeItem(IMAGE_VIEW_STORAGE_KEY);
+            sessionStorage.removeItem(OFFLINE_VIEW_STORAGE_KEY);
+            toast.error("Mất kết nối", {
+              description: "Heartbeat thất bại nhiều lần. Vui lòng connect lại.",
+            });
+          }
+          return;
+        }
+
+        heartbeatFailCountRef.current = 0;
+      } catch {
+        heartbeatFailCountRef.current += 1;
+      } finally {
+        heartbeatInFlightRef.current = false;
+      }
+    }, HEARTBEAT_INTERVAL_MS);
+  };
+
+  useEffect(() => {
+    return () => {
+      stopHeartbeat();
+    };
+  }, []);
+
+  useEffect(() => {
+    const restoreSession = async () => {
+      if (!connectionId || !connectApiBase || !connectApiKey) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`${connectApiBase}/connection/status`, {
+          method: "GET",
+          headers: {
+            "X-API-Key": connectApiKey,
+          },
+        });
+
+        if (!response.ok) {
+          clearConnectionState();
+          return;
+        }
+
+        const data = (await response.json()) as ConnectionStatusResponse;
+        const alive = data.is_connected && data.connection_id === connectionId;
+        if (!alive) {
+          clearConnectionState();
+          return;
+        }
+
+        setIsConnected(true);
+        startHeartbeat(connectionId);
+      } catch {
+        clearConnectionState();
+      }
+    };
+
+    restoreSession();
+  }, [connectionId, connectApiBase, connectApiKey]);
 
   const handleConnect = async () => {
     if (isConnecting) {
       return;
     }
 
-    if (!healthApiKey) {
+    if (!connectApiKey) {
       setHasConnectionError(true);
       toast.error("Thiếu API key", {
-        description: "Hãy cấu hình VITE_HEALTH_API_KEY trong file .env của frontend.",
+        description: "Hãy cấu hình VITE_CONNECT_API_KEY hoặc VITE_HEALTH_API_KEY trong file .env của frontend.",
       });
       return;
     }
 
-    if (!healthApiBase) {
+    if (!connectApiBase) {
       setHasConnectionError(true);
       toast.error("Thiếu URL API", {
-        description: "Hãy cấu hình VITE_HEALTH_API_URL trong file .env của frontend.",
+        description: "Hãy cấu hình VITE_CONNECT_API_URL hoặc VITE_HEALTH_API_URL trong file .env của frontend.",
       });
       return;
     }
@@ -66,28 +271,43 @@ const Index = () => {
     const timeoutId = window.setTimeout(() => controller.abort(), 5000);
 
     try {
-      const response = await fetch(`${healthApiBase}/health`, {
-        method: "GET",
+      const response = await fetch(`${connectApiBase}/connect`, {
+        method: "POST",
         headers: {
-          "X-API-Key": healthApiKey,
+          "Content-Type": "application/json",
+          "X-API-Key": connectApiKey,
         },
+        body: JSON.stringify({
+          client_id: getOrCreateClientId(),
+          metadata: {
+            app: "pixel-perfect-ai",
+          },
+        }),
         signal: controller.signal,
       });
 
-      if (!response.ok) {
+      const data = (await response.json()) as ConnectResponse;
+
+      if (data.message === "BUSY") {
+        throw new Error("Server đang bận (BUSY). Có client khác đang giữ kết nối.");
+      }
+
+      if (!response.ok || !data.connection_id) {
         throw new Error(`Server trả về HTTP ${response.status}`);
       }
 
       setIsConnected(true);
+      setConnectionId(data.connection_id);
       setHasConnectionError(false);
       sessionStorage.setItem(SESSION_KEY, "true");
+      sessionStorage.setItem(CONNECTION_ID_KEY, data.connection_id);
+      startHeartbeat(data.connection_id);
       toast.success("Connect thành công", {
-        description: "Session đã được mở. Các tab chức năng đã sẵn sàng.",
+        description: "Session đã được mở và heartbeat đang chạy nền.",
       });
     } catch (error) {
-      setIsConnected(false);
+      clearConnectionState();
       setHasConnectionError(true);
-      sessionStorage.removeItem(SESSION_KEY);
       const message = error instanceof Error ? error.message : "Không thể kết nối tới server";
       toast.error("Connect thất bại", {
         description: message,
@@ -98,11 +318,28 @@ const Index = () => {
     }
   };
 
-  const handleDisconnect = () => {
-    setIsConnected(false);
+  const handleDisconnect = async () => {
+    const currentConnectionId = connectionId;
+    stopHeartbeat();
+
+    if (currentConnectionId && connectApiBase && connectApiKey) {
+      try {
+        await fetch(`${connectApiBase}/disconnect`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-API-Key": connectApiKey,
+          },
+          body: JSON.stringify({ connection_id: currentConnectionId }),
+        });
+      } catch {
+        // Local state is still cleared to avoid blocked UI on transient network failures.
+      }
+    }
+
+    clearConnectionState();
     setHasConnectionError(false);
     setActiveMode(0);
-    sessionStorage.removeItem(SESSION_KEY);
     sessionStorage.removeItem(IMAGE_VIEW_STORAGE_KEY);
     sessionStorage.removeItem(OFFLINE_VIEW_STORAGE_KEY);
     toast("Đã disconnect", {
@@ -141,7 +378,7 @@ const Index = () => {
                     Nhấn Connect để xác thực với server và mở toàn bộ tab như Overview, Realtime Stream, Offline Processing...
                   </p>
                   <p className="text-xs font-mono text-muted-foreground">
-                    Endpoint: {healthServerUrl ? `${healthServerUrl}/health` : "Chưa cấu hình VITE_HEALTH_SERVER_URL"}
+                    Endpoint: {connectServerUrl ? `${connectServerUrl}/connect` : "Chưa cấu hình VITE_CONNECT_SERVER_URL"}
                   </p>
                 </div>
                 <div>
