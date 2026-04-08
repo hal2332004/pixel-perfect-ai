@@ -3,6 +3,7 @@ import { BeforeAfterSlider } from "@/components/BeforeAfterSlider";
 import { useLanguage } from "@/context/LanguageContext";
 import { Upload, ZoomIn, Download, Loader2, ImagePlus, Clock3 } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
+import { isAbortError } from "@/lib/isAbortError";
 import demoFoodLr from "@/assets/demo-food-lr.jpg";
 import demoFoodHr from "@/assets/demo-food-hr.jpg";
 import demoSushiLr from "@/assets/demo-sushi-lr.jpg";
@@ -36,7 +37,7 @@ type UploadResultItem = {
   heightOut: number;
 };
 
-const API_TIMEOUT_MS = 120000;
+const API_TIMEOUT_MS = 300000;
 const IMAGE_VIEW_STORAGE_KEY = "image-view-state";
 
 type PersistedImageViewState = {
@@ -174,7 +175,11 @@ export function ImageView() {
     const previewUrl = URL.createObjectURL(file);
 
     const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+    let didTimeout = false;
+    const timeoutId = window.setTimeout(() => {
+      didTimeout = true;
+      controller.abort();
+    }, API_TIMEOUT_MS);
 
     try {
       const formData = new FormData();
@@ -218,6 +223,15 @@ export function ImageView() {
         description: `${nextItem.model} - ${nextItem.latencyMs.toFixed(1)} ms`,
       });
     } catch (error) {
+      if (didTimeout) {
+        toast.error("Upload hoặc inference thất bại", { description: "Request bị timeout" });
+        return;
+      }
+
+      if (isAbortError(error)) {
+        return;
+      }
+
       const message = error instanceof Error ? error.message : "Không thể xử lý ảnh";
       toast.error("Upload hoặc inference thất bại", { description: message });
     } finally {

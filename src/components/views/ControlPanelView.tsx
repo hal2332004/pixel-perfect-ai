@@ -1,8 +1,13 @@
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MetricCard } from "@/components/MetricCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useLanguage } from "@/context/LanguageContext";
+import { isAbortError } from "@/lib/isAbortError";
 import { Cpu, Thermometer, Zap, HardDrive, AlertTriangle, CheckCircle } from "lucide-react";
+
+const CONTROL_PANEL_TIMEOUT_MS = 60000;
+const CONTROL_PANEL_POLL_MS = 5000;
+const CONTROL_PANEL_RETRY_MS = 12000;
 
 interface Alert {
   id: string;
@@ -22,6 +27,7 @@ export function ControlPanelView() {
   const [activeModel, setActiveModel] = useState("Real-ESRGAN");
   const [pollError, setPollError] = useState<string | null>(null);
   const [lastSource, setLastSource] = useState<"tegrastats" | "fallback" | null>(null);
+  const pollInFlightRef = useRef(false);
 
   const inferredHealthApiBase =
     typeof window !== "undefined"
@@ -43,10 +49,31 @@ export function ControlPanelView() {
     }
 
     let isActive = true;
+    let timerId: number | null = null;
+    let activeController: AbortController | null = null;
+
+    const scheduleNext = (delayMs: number) => {
+      if (!isActive) {
+        return;
+      }
+      timerId = window.setTimeout(() => {
+        void fetchMetrics();
+      }, delayMs);
+    };
 
     const fetchMetrics = async () => {
+      if (pollInFlightRef.current) {
+        return;
+      }
+
+      pollInFlightRef.current = true;
       const controller = new AbortController();
-      const timeoutId = window.setTimeout(() => controller.abort(), 10000);
+      activeController = controller;
+      let didTimeout = false;
+      const timeoutId = window.setTimeout(() => {
+        didTimeout = true;
+        controller.abort();
+      }, CONTROL_PANEL_TIMEOUT_MS);
 
       try {
         const response = await fetch(`${healthApiBase}/control-panel/metrics`, {
@@ -110,8 +137,20 @@ export function ControlPanelView() {
         if (typeof data.active_model === "string" && data.active_model.trim()) {
           setActiveModel(data.active_model);
         }
+
+        scheduleNext(CONTROL_PANEL_POLL_MS);
       } catch (error) {
         if (!isActive) {
+          return;
+        }
+
+        if (didTimeout) {
+          setPollError("Request timed out");
+          scheduleNext(CONTROL_PANEL_RETRY_MS);
+          return;
+        }
+
+        if (isAbortError(error)) {
           return;
         }
 
@@ -121,19 +160,27 @@ export function ControlPanelView() {
           endpoint: `${healthApiBase}/control-panel/metrics`,
           message,
         });
+        scheduleNext(CONTROL_PANEL_RETRY_MS);
       } finally {
         window.clearTimeout(timeoutId);
+        pollInFlightRef.current = false;
+        if (activeController === controller) {
+          activeController = null;
+        }
       }
     };
 
     void fetchMetrics();
-    const interval = setInterval(() => {
-      void fetchMetrics();
-    }, 5000); // Poll every 5 seconds
 
     return () => {
       isActive = false;
-      clearInterval(interval);
+      if (timerId !== null) {
+        window.clearTimeout(timerId);
+      }
+      if (activeController) {
+        activeController.abort();
+      }
+      pollInFlightRef.current = false;
     };
   }, [healthApiBase, healthApiKey]);
 

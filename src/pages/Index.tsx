@@ -7,6 +7,8 @@ import { ImageView } from "@/components/views/ImageView";
 import { ControlPanelView } from "@/components/views/ControlPanelView";
 import { ModelArenaView } from "@/components/views/ModelArenaView";
 import { toast } from "@/components/ui/sonner";
+import { randomUUID } from "@/lib/uuid";
+import { isAbortError } from "@/lib/isAbortError";
 import { Wifi, WifiOff, ShieldAlert } from "lucide-react";
 
 const views = [OverviewView, RealtimeView, OfflineView, ImageView, ControlPanelView, ModelArenaView];
@@ -15,6 +17,7 @@ const CONNECTION_ID_KEY = "health-connection-id";
 const CLIENT_ID_KEY = "health-client-id";
 const IMAGE_VIEW_STORAGE_KEY = "image-view-state";
 const OFFLINE_VIEW_STORAGE_KEY = "offline-video-view-state";
+const REALTIME_STREAM_JOB_ID_KEY = "realtime-stream-job-id";
 const HEARTBEAT_INTERVAL_MS = 10_000;
 
 type ConnectResponse = {
@@ -100,7 +103,7 @@ function getOrCreateClientId(): string {
     return existing;
   }
 
-  const created = `web-ui-${crypto.randomUUID()}`;
+  const created = `web-ui-${randomUUID()}`;
   localStorage.setItem(CLIENT_ID_KEY, created);
   return created;
 }
@@ -268,7 +271,11 @@ const Index = () => {
     setHasConnectionError(false);
 
     const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), 5000);
+    let didTimeout = false;
+    const timeoutId = window.setTimeout(() => {
+      didTimeout = true;
+      controller.abort();
+    }, 5000);
 
     try {
       const response = await fetch(`${connectApiBase}/connect`, {
@@ -308,6 +315,15 @@ const Index = () => {
     } catch (error) {
       clearConnectionState();
       setHasConnectionError(true);
+      if (didTimeout) {
+        toast.error("Connect thất bại", { description: "Request bị timeout" });
+        return;
+      }
+
+      if (isAbortError(error)) {
+        return;
+      }
+
       const message = error instanceof Error ? error.message : "Không thể kết nối tới server";
       toast.error("Connect thất bại", {
         description: message,
@@ -337,11 +353,25 @@ const Index = () => {
       }
     }
 
+    if (healthApiBase && healthApiKey) {
+      try {
+        await fetch(`${healthApiBase}/inference/video/stream/stop-all`, {
+          method: "POST",
+          headers: {
+            "X-API-Key": healthApiKey,
+          },
+        });
+      } catch {
+        // Best-effort stream stop on disconnect.
+      }
+    }
+
     clearConnectionState();
     setHasConnectionError(false);
     setActiveMode(0);
     sessionStorage.removeItem(IMAGE_VIEW_STORAGE_KEY);
     sessionStorage.removeItem(OFFLINE_VIEW_STORAGE_KEY);
+    sessionStorage.removeItem(REALTIME_STREAM_JOB_ID_KEY);
     toast("Đã disconnect", {
       description: "Session hiện tại đã được xóa. Bạn có thể connect lại.",
     });

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import { Upload, Video, Loader2, Clock3, Download, ExternalLink, Film } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
+import { isAbortError } from "@/lib/isAbortError";
 
 type JobStatus = "queued" | "running" | "done" | "failed" | "stopped";
 
@@ -33,7 +34,7 @@ type OfflineResultItem = {
   errorMessage: string | null;
 };
 
-const API_TIMEOUT_MS = 120000;
+const API_TIMEOUT_MS = 300000;
 const POLL_INTERVAL_MS = 1200;
 const OFFLINE_VIEW_STORAGE_KEY = "offline-video-view-state";
 
@@ -304,7 +305,11 @@ export function OfflineView() {
     setIsLoading(true);
     const previewUrl = URL.createObjectURL(file);
     const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+    let didTimeout = false;
+    const timeoutId = window.setTimeout(() => {
+      didTimeout = true;
+      controller.abort();
+    }, API_TIMEOUT_MS);
 
     try {
       const formData = new FormData();
@@ -355,6 +360,15 @@ export function OfflineView() {
         description: `${nextItem.model} - frame_skip=${nextItem.frameSkip}`,
       });
     } catch (error) {
+      if (didTimeout) {
+        toast.error("Upload video thất bại", { description: "Request bị timeout" });
+        return;
+      }
+
+      if (isAbortError(error)) {
+        return;
+      }
+
       const message = error instanceof Error ? error.message : "Không thể upload video";
       toast.error("Upload video thất bại", { description: message });
     } finally {
